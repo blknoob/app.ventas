@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import { connectDB } from "./configs/db.js";
 import { configureHandlebars } from "./configs/handlebars.js";
 import { initializePassport } from "./configs/passport/index.js";
+import jwt from "jsonwebtoken";
 
 import indexRouter from "./routes/index.router.js";
 
@@ -15,15 +16,15 @@ const PORT = process.env.PORT || 8080;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser(process.env.COOKIE_SECRET || "default-secret"));
+app.use(cookieParser(process.env.COOKIE_SECRET));
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "default-session",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false,
+      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000,
     },
@@ -36,12 +37,11 @@ app.use(passport.initialize());
 app.use(passport.session());
 initializePassport();
 
-import jwt from "jsonwebtoken";
 app.use((req, res, next) => {
   const token = req.cookies?.access_token;
   if (token) {
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || "secret");
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
       req.user = decoded;
     } catch (e) {
       req.user = null;
@@ -60,7 +60,7 @@ const startServer = async () => {
   try {
     await connectDB();
     app.listen(PORT, () => {
-      console.log(`http://localhost:${PORT}`);
+      console.log(`Servidor iniciado en el puerto ${PORT}`);
     });
   } catch (error) {
     console.error("Error:", error);
