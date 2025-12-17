@@ -51,7 +51,10 @@ class CartsDAO {
         if (item.product && item.product._id) {
           return item.product._id.toString() === productId;
         }
-        return item.product.toString() === productId;
+        if (item.product) {
+          return item.product.toString() === productId;
+        }
+        return false; // Evita error si item.product es null
       });
 
       if (existingProduct) {
@@ -75,7 +78,10 @@ class CartsDAO {
         if (item.product && item.product._id) {
           return item.product._id.toString() !== productId;
         }
-        return item.product.toString() !== productId;
+        if (item.product) {
+          return item.product.toString() !== productId;
+        }
+        return true; // Mantén el item si product es null
       });
 
       return await cart.save();

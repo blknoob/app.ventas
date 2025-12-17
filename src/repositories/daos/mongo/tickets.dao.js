@@ -1,25 +1,8 @@
 import Ticket from "./models/tickets.model.js";
 
 class TicketsDAO {
-  async create(ticketData) {
-    try {
-      if (!ticketData.code) {
-        ticketData.code = Date.now() + Math.floor(Math.random() * 1000);
-      }
-
-      const ticket = new Ticket(ticketData);
-      return await ticket.save();
-    } catch (error) {
-      throw new Error(`Error al crear ticket: ${error.message}`);
-    }
-  }
-
   async findById(id) {
-    try {
-      return await Ticket.findById(id);
-    } catch (error) {
-      throw new Error(`Error al buscar ticket: ${error.message}`);
-    }
+    return await Ticket.findById(id);
   }
 
   async findByCode(code) {
@@ -64,6 +47,14 @@ class TicketsDAO {
       });
     } catch (error) {
       throw new Error(`Error al buscar tickets del usuario: ${error.message}`);
+    }
+  }
+
+  async create(ticketData) {
+    try {
+      return await Ticket.create(ticketData);
+    } catch (error) {
+      throw new Error(`Error creando ticket: ${error.message}`);
     }
   }
 }

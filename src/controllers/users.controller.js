@@ -1,6 +1,7 @@
 import UserDTO from "../dtos/user.dto.js";
 import UsersService from "../services/users.service.js";
 import { generateToken } from "../utils/jwt.js";
+import { logAuthAttempt, logSecurityEvent } from "../utils/logger.js";
 
 const usersService = new UsersService();
 
@@ -34,11 +35,16 @@ class UsersController {
       });
 
       if (response.error) {
+        // OWASP - Log intento de registro fallido
+        logAuthAttempt('register', email, false, req, response.message);
         return res.status(response.type || 500).json({
           status: "error",
           message: response.message,
         });
       }
+
+      // OWASP - Log registro exitoso
+      logAuthAttempt('register', email, true, req);
 
       const token = generateToken({
         _id: response._id,
@@ -67,6 +73,9 @@ class UsersController {
       const response = await usersService.login(email, password);
 
       if (response.error) {
+        // OWASP - Log intento de login fallido
+        logAuthAttempt('login', email, false, req, response.message);
+        
         if (
           req.headers.accept &&
           req.headers.accept.includes("application/json")
@@ -79,6 +88,9 @@ class UsersController {
 
         return res.redirect("/login");
       }
+
+      // OWASP - Log login exitoso
+      logAuthAttempt('login', email, true, req);
 
       const token = generateToken({
         _id: response.user._id,

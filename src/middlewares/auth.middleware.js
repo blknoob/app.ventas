@@ -3,49 +3,69 @@ import UsersRepository from "../repositories/users.repository.js";
 
 const usersRepository = new UsersRepository();
 
-export const authenticateToken = async (req, res, next) => {
-  const token =
-    req.cookies.access_token || req.headers.authorization?.split(" ")[1];
+// Middleware unificado que funciona para APIs y vistas
+export const authenticate = (req, res, next) => {
+  const token = req.cookies.access_token || req.headers.authorization?.split(" ")[1];
 
   if (!token) {
-    return res
-      .status(401)
-      .json({ status: "error", message: "Token requerido" });
+    // Para vistas: redirigir a login
+    if (req.accepts('html')) {
+      return res.redirect('/login');
+    }
+    // Para APIs: retornar error JSON
+    return res.status(401).json({
+      success: false,
+      message: "Token requerido",
+      code: "TOKEN_REQUIRED"
+    });
   }
 
   const decoded = verifyToken(token);
   if (!decoded) {
-    return res.status(401).json({ status: "error", message: "Token inválido" });
+    if (req.accepts('html')) {
+      return res.redirect('/login');
+    }
+    return res.status(401).json({
+      success: false,
+      message: "Token inválido o expirado",
+      code: "TOKEN_INVALID"
+    });
   }
-  const user = await usersRepository.findById(decoded._id);
 
-  if (!user) {
-    return res
-      .status(401)
-      .json({ status: "error", message: "Usuario no válido" });
-  }
-
-  req.user = {
-    _id: user._id,
-    email: user.email,
-    first_name: user.first_name,
-    last_name: user.last_name,
-    role: user.role,
-  };
-
+  // Adjuntar usuario a request
+  req.user = decoded;
   next();
 };
 
-export const isAdmin = (req, res, next) => {
+export const requireAdmin = (req, res, next) => {
   if (!req.user) {
-    return res.status(401).json({ status: "error", message: "No autenticado" });
+    if (req.accepts('html')) {
+      return res.redirect('/login');
+    }
+    return res.status(401).json({
+      success: false,
+      message: "No autenticado",
+      code: "NOT_AUTHENTICATED"
+    });
   }
 
   if (req.user.role !== "admin") {
-    return res
-      .status(403)
-      .json({ status: "error", message: "Solo administradores" });
+    if (req.accepts('html')) {
+      return res.render("permissions", {
+        title: "Sin Permisos",
+        message: "Solo administradores pueden acceder a esta sección"
+      });
+    }
+    return res.status(403).json({
+      success: false,
+      message: "Acceso denegado: Se requieren permisos de administrador",
+      code: "INSUFFICIENT_PERMISSIONS"
+    });
   }
 
   next();
 };
+
+// Alias para compatibilidad con código existente
+export const authenticateToken = authenticate;
+export const isAdmin = requireAdmin;

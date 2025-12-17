@@ -61,6 +61,14 @@ class ProductsRepository {
             throw new Error(`Error reduciendo stock: ${error.message}`);
         }
     }
+
+    async getById(id) {
+        try {
+            return await this.dao.getById(id);
+        } catch (error) {
+            throw new Error(`Error buscando producto por ID: ${error.message}`);
+        }
+    }
 }
 
 export default ProductsRepository;

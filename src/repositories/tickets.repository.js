@@ -1,16 +1,16 @@
 import TicketsDAO from "./daos/mongo/tickets.dao.js";
+import mongoose from "mongoose";
 
 class TicketsRepository {
   constructor() {
     this.dao = new TicketsDAO();
   }
 
-  async findById(id) {
-    try {
-      return await this.dao.findById(id);
-    } catch (error) {
-      throw new Error(`Error buscando ticket: ${error.message}`);
+  async getById(id) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new Error("El ID del ticket no es válido.");
     }
+    return await this.dao.findById(id);
   }
 
   async findByCode(code) {

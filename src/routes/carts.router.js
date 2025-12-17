@@ -1,19 +1,25 @@
 import { Router } from "express";
-import CartsController from "../controllers/carts.controller.js";
-import { authenticateToken } from "../middlewares/auth.middleware.js";
+import {
+  getCart,
+  clearUserCart,
+  addProductToCart,
+  updateProductQuantity,
+  removeProductFromCart,
+  purchaseCart
+} from "../controllers/cart.controller.js";
+import { authenticate } from "../middlewares/auth.middleware.js";
 
 const router = Router();
-const cartsController = new CartsController();
 
-router.use(authenticateToken);
+router.use(authenticate);
 
-router.get("/", cartsController.getCarts);
-router.delete("/", cartsController.clearCart);
+router.get("/", getCart);
+router.delete("/", clearUserCart);
 
-router.post("/products/:productId", cartsController.addProduct);
-router.put("/products/:productId", cartsController.updateProductQuantity);
-router.delete("/products/:productId", cartsController.removeProduct);
+router.post("/products/:productId", addProductToCart);
+router.put("/products/:productId", updateProductQuantity);
+router.delete("/products/:productId", removeProductFromCart);
 
-router.post("/purchase", cartsController.purchaseCart);
+router.post("/purchase", purchaseCart);
 
 export default router;

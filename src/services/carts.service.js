@@ -1,12 +1,14 @@
 import CartsRepository from "../repositories/carts.repository.js";
 import ProductsRepository from "../repositories/products.repository.js";
 import UsersRepository from "../repositories/users.repository.js";
+import TicketsService from "./tickets.service.js";
 
 class CartsService {
   constructor() {
     this.repository = new CartsRepository();
     this.productsRepository = new ProductsRepository();
     this.usersRepository = new UsersRepository();
+    this.ticketsService = new TicketsService();
   }
 
   async getUserCart(userId) {
@@ -35,9 +37,17 @@ class CartsService {
 
   async addProductToCart(cartId, productId, quantity = 1) {
     try {
+      console.log("productId recibido:", productId);
+      const product = await this.productsRepository.getById(productId);
+      console.log("Producto encontrado:", product);
+      if (!product || !product._id) {
+        throw new Error("Producto no encontrado");
+      }
+      const prodIdStr = product._id.toString();
+
       const updatedCart = await this.repository.addProduct(
         cartId,
-        productId,
+        prodIdStr,
         quantity
       );
       return updatedCart;
@@ -94,9 +104,7 @@ class CartsService {
 
   async processCartPurchase(cartId, user) {
     try {
-      const TicketsService = (await import("./tickets.service.js")).default;
-      const ticketsService = new TicketsService();
-      return await ticketsService.processPurchase(user._id, cartId);
+      return await this.ticketsService.processPurchase(user._id, cartId);
     } catch (error) {
       throw new Error(`Error procesando compra: ${error.message}`);
     }

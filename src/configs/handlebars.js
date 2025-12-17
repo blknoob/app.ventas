@@ -16,9 +16,14 @@ export const configureHandlebars = (app) => {
       allowProtoPropertiesByDefault: true,
       helpers: {
         multiply: (a, b) => a * b,
-        sumCartTotal: (products) => {
-          if (!products) return 0;
-          return products.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
+        sumCartTotal: function (cart) {
+          if (!Array.isArray(cart)) return 0;
+          return cart.reduce((total, item) => {
+            if (item && typeof item.price === "number") {
+              return total + item.price * (item.quantity || 1);
+            }
+            return total;
+          }, 0);
         },
         eq: (a, b) => a === b
       }

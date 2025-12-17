@@ -10,11 +10,11 @@ class ProductsDAO {
     }
   }
 
-  async findById(id) {
+  async getById(id) {
     try {
       return await Product.findById(id);
     } catch (error) {
-      throw new Error(`Error al buscar producto: ${error.message}`);
+      throw new Error(`Error buscando producto por ID: ${error.message}`);
     }
   }
 
@@ -28,8 +28,15 @@ class ProductsDAO {
 
   async findAll(options = {}) {
     try {
-      return await Product.find({}).sort({ createdAt: -1 });
+      console.log('🔍 ProductsDAO: Consultando productos en la base de datos...');
+      const products = await Product.find({}).sort({ createdAt: -1 });
+      console.log(`📊 ProductsDAO: Encontrados ${products.length} productos en BD`);
+      products.forEach((product, index) => {
+        console.log(`   ${index + 1}. ${product.title} - Código: ${product.code}`);
+      });
+      return products;
     } catch (error) {
+      console.error('❌ Error en ProductsDAO.findAll:', error);
       throw new Error(`Error al obtener productos: ${error.message}`);
     }
   }
@@ -68,6 +75,14 @@ class ProductsDAO {
       return await product.save();
     } catch (error) {
       throw new Error(`Error al reducir stock: ${error.message}`);
+    }
+  }
+
+  async findById(id) {
+    try {
+      return await Product.findById(id);
+    } catch (error) {
+      throw new Error(`Error buscando producto: ${error.message}`);
     }
   }
 }

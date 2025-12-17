@@ -1,8 +1,4 @@
-
-
-
 // RUTAS VISTAS
-import CartsService from "../services/carts.service.js";
 import { Router } from "express";
 import {
   authenticatePassport,
@@ -12,31 +8,54 @@ import {
 } from "../middlewares/passport.middleware.js";
 import ProductsViewController from "../controllers/products.view.js";
 import UsersViewController from "../controllers/users.view.js";
-import CartsViewController from "../controllers/carts.view.js";
+import {
+  processCheckout,
+  addToCart,
+  removeFromCart,
+  updateCartQuantity,
+  clearCart,
+  getCartView
+} from "../controllers/cart.controller.js";
+import { validateCartData, validateObjectId } from "../middlewares/validation.middleware.js";
+import PaymentsService from "../services/payments.service.js";
+import { createPaymentProofUpload, createSecureStorage, validateFile, handleMulterError } from "../middlewares/upload.middleware.js";
+import multer from "multer";
+import mongoose from "mongoose";
 
 const router = Router();
-const cartsService = new CartsService();
-const cartsViewController = new CartsViewController();
 const productsViewController = new ProductsViewController();
 const usersViewController = new UsersViewController();
+const paymentsService = new PaymentsService();
 
-// Finalizar compra y generar ticket desde la vista
+// OWASP - Configuraciones seguras de multer
+const paymentProofUpload = createPaymentProofUpload();
+
+// Para imágenes de productos
+const productImageStorage = createSecureStorage('public/images/');
+const productImageUpload = multer({
+  storage: productImageStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+    files: 1
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      const error = new Error('Solo se permiten imágenes (JPEG, PNG, GIF, WebP)');
+      error.code = 'INVALID_FILE_TYPE';
+      cb(error, false);
+    }
+  }
+});
+
+// Finalizar compra y generar orden desde la vista
 router.post(
   "/cart/checkout",
   authenticatePassport,
   userInSesion,
-  async (req, res) => {
-    const userId = req.user._id;
-    try {
-      const cart = await cartsService.getUserCart(userId);
-      const ticket = await cartsService.processCartPurchase(cart._id, req.user);
-      // Redirigir a la página de tickets o mostrar confirmación
-      res.redirect("/tickets");
-    } catch (error) {
-      console.error("[ERROR /cart/checkout]", error);
-      res.status(500).send("Error al finalizar la compra");
-    }
-  }
+  processCheckout
 );
 
 // Quitar producto del carrito desde la vista
@@ -44,18 +63,7 @@ router.post(
   "/cart/remove",
   authenticatePassport,
   userInSesion,
-  async (req, res) => {
-    const productId = req.body.productId;
-    const userId = req.user._id;
-    try {
-      const cart = await cartsService.getUserCart(userId);
-      await cartsService.removeProductToCart(cart._id, productId);
-      res.redirect("/cart");
-    } catch (error) {
-      console.error("[ERROR /cart/remove]", error);
-      res.status(500).send("Error quitando producto del carrito");
-    }
-  }
+  removeFromCart
 );
 
 // Rutas públicas
@@ -100,27 +108,31 @@ router.get(
   usersViewController.getCurrentView
 );
 
-router.get("/cart", authenticatePassport, userInSesion, (req, res, next) => {
-  cartsViewController.getCartView(req, res, next);
-});
+router.get("/cart", authenticatePassport, userInSesion, getCartView);
 
 router.post(
   "/cart/add",
   authenticatePassport,
   userInSesion,
-  async (req, res) => {
-    const productId = req.body.productId;
-    const userId = req.user._id;
-    try {
-      // Obtener el carrito del usuario (o crearlo)
-      const cart = await cartsService.getUserCart(userId);
-      await cartsService.addProductToCart(cart._id, productId, 1);
-      res.redirect("/");
-    } catch (error) {
-      console.error("[ERROR /cart/add]", error);
-      res.status(500).send("Error agregando producto al carrito");
-    }
-  }
+  validateCartData,
+  addToCart
+);
+
+// Actualizar cantidad de producto en carrito
+router.post(
+  "/cart/update",
+  authenticatePassport,
+  userInSesion,
+  validateCartData,
+  updateCartQuantity
+);
+
+// Vaciar carrito
+router.post(
+  "/cart/clear",
+  authenticatePassport,
+  userInSesion,
+  clearCart
 );
 
 import TicketsService from "../services/tickets.service.js";
@@ -236,11 +248,20 @@ router.post(
   authenticatePassport,
   requireAdmin,
   userInSesion,
+  productImageUpload.single("image"),
+  validateFile({ 
+    required: false, 
+    allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
+    maxFileSize: 5 * 1024 * 1024 
+  }),
   async (req, res) => {
     try {
       const { title, description, category, code, price, stock } = req.body;
-      const ProductsService = (await import("../services/products.service.js"))
-        .default;
+      let image = null;
+      if (req.file) {
+        image = `/images/${req.file.filename}`; // Guarda la ruta del archivo
+      }
+      const ProductsService = (await import("../services/products.service.js")).default;
       const productsService = new ProductsService();
       await productsService.createProduct({
         title,
@@ -249,6 +270,7 @@ router.post(
         code,
         price,
         stock,
+        image,
       });
       res.redirect("/admin/products");
     } catch (error) {
@@ -305,20 +327,36 @@ router.post(
   authenticatePassport,
   requireAdmin,
   userInSesion,
+  productImageUpload.single("image"),
+  validateFile({ 
+    required: false, 
+    allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
+    maxFileSize: 5 * 1024 * 1024 
+  }),
   async (req, res) => {
     try {
-      const { id } = req.params;
       const { title, description, category, code, price, stock } = req.body;
+      const productId = req.params.id;
+      let image = null;
+
+      if (req.file) {
+        image = `/images/${req.file.filename}`; // Guarda la ruta del archivo
+      }
+
       const ProductsService = (await import("../services/products.service.js")).default;
       const productsService = new ProductsService();
-      await productsService.updateProduct(id, {
+      const currentProduct = await productsService.getProductById(productId);
+
+      await productsService.updateProduct(productId, {
         title,
         description,
         category,
         code,
         price,
         stock,
+        image: image || currentProduct.image,
       });
+
       res.redirect("/admin/products");
     } catch (error) {
       res.status(500).send("Error actualizando producto");
@@ -345,5 +383,114 @@ router.post(
     }
   }
 );
+
+// === Checkout: Vistas de pago para una orden ===
+
+// 3.1 Ver pantalla de pago (selección de método)
+router.get(
+  "/checkout/payment/:orderId",
+  authenticatePassport,
+  userInSesion,
+  async (req, res) => {
+    const { orderId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).send("El ID de la orden no es válido.");
+    }
+    try {
+      let order = await ticketsService.repository.getById(orderId);
+      if (!order) return res.status(404).send("Orden no encontrada");
+      order = order.toObject ? order.toObject() : order;
+      res.render("checkout/payment", { order });
+    } catch (error) {
+      console.error("[ERROR GET /checkout/payment/:orderId]", error);
+      res.status(500).send("Error cargando la pantalla de pago");
+    }
+  }
+);
+
+// 3.2 Reportar Pago Móvil (manual) + comprobante
+router.post(
+  "/checkout/payment/pagomovil/:orderId",
+  authenticatePassport,
+  userInSesion,
+  paymentProofUpload.single("proof"),
+  validateFile({ 
+    required: true, 
+    allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
+    maxFileSize: 5 * 1024 * 1024 
+  }),
+  async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const { bank, phone, docId, reference, amount } = req.body;
+
+      if (!bank || !phone || !docId || !reference || !amount) {
+        return res.status(400).send("Datos de pago incompletos");
+      }
+
+      // Guarda solo la ruta del archivo
+      const proofUrl = req.file
+        ? `/comprobantes/${req.file.filename}`
+        : undefined;
+
+      await paymentsService.captureManual({
+        orderId,
+        method: "pago_movil",
+        payload: { bank, phone, docId, reference, amount, proofUrl }
+      });
+
+      res.redirect(`/checkout/thanks/${orderId}`);
+    } catch (error) {
+      console.error("[ERROR POST /checkout/payment/pagomovil/:orderId]", error);
+      res.status(500).send("Error reportando Pago Móvil");
+    }
+  }
+);
+
+// 3.3 Reportar Zelle (manual)
+router.post(
+  "/checkout/payment/zelle/:orderId",
+  authenticatePassport,
+  userInSesion,
+  async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const { email, reference, amount } = req.body;
+
+      await paymentsService.captureManual({
+        orderId,
+        method: "zelle",
+        payload: { email, reference, amount }
+      });
+
+      res.redirect(`/checkout/thanks/${orderId}`);
+    } catch (error) {
+      console.error("[ERROR POST /checkout/payment/zelle/:orderId]", error);
+      res.status(500).send("Error reportando Zelle");
+    }
+  }
+);
+
+// 3.4 Pantalla de gracias
+router.get(
+  "/checkout/thanks/:orderId",
+  authenticatePassport,
+  userInSesion,
+  async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      let order = await ticketsService.repository.getById(orderId);
+      if (!order) return res.status(404).send("Orden no encontrada");
+      order = order.toObject ? order.toObject() : order;
+      res.render("checkout/thanks", { order });
+    } catch (error) {
+      console.error("[ERROR GET /checkout/thanks/:orderId]", error);
+      res.status(500).send("Error mostrando confirmación");
+    }
+  }
+);
+
+// OWASP - Middleware de manejo de errores de multer
+router.use(handleMulterError);
 
 export default router;

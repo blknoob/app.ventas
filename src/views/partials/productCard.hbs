@@ -1,4 +1,11 @@
 <div class="product-card">
+  <div class="product-img-container">
+    {{#if image}}
+      <img class="product-img" src="data:image/jpeg;base64,{{image}}" alt="{{title}}" style="max-width:60px; max-height:60px; border-radius:6px;">
+    {{else}}
+      <span style="color:#aaa;">Sin imagen</span>
+    {{/if}}
+  </div>
   <h3 class="product-title">{{title}}</h3>
   <p class="product-price"><strong>Precio:</strong> ${{price}}</p>
   <p class="product-desc">{{description}}</p>

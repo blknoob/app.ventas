@@ -8,9 +8,15 @@
     <strong>Código:</strong> {{product.code}}<br>
     <strong>Precio:</strong> ${{product.price}}<br>
     <strong>Stock:</strong> {{product.stock}}<br>
+    <strong>Imagen actual:</strong><br>
+    {{#if product.image}}
+      <img src="data:image/jpeg;base64,{{product.image}}" alt="{{product.title}}" style="max-width:120px; max-height:120px; border-radius:8px;">
+    {{else}}
+      <span style="color:#aaa;">Sin imagen</span>
+    {{/if}}
   </div>
 
-  <form action="/admin/products/edit/{{product._id}}" method="POST" style="margin-bottom:2rem;">
+  <form action="/admin/products/edit/{{product._id}}" method="POST" enctype="multipart/form-data" style="margin-bottom:2rem;">
     <label for="title"><strong>Título:</strong></label>
     <input type="text" id="title" name="title" value="{{product.title}}" required style="margin-right:1rem;">
     <label for="description"><strong>Descripción:</strong></label>
@@ -23,6 +29,8 @@
     <input type="number" id="price" name="price" step="0.01" min="0" value="{{product.price}}" required style="margin-right:1rem; width:80px;">
     <label for="stock"><strong>Stock:</strong></label>
     <input type="number" id="stock" name="stock" min="0" value="{{product.stock}}" required style="margin-right:1rem; width:60px;">
+    <label for="image"><strong>Nueva imagen:</strong></label>
+    <input type="file" id="image" name="image" accept="image/*" style="margin-right:1rem;">
     <button type="submit" style="font-weight:bold;">Guardar Cambios</button>
   </form>
 {{else}}
