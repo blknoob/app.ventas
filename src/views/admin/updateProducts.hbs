@@ -5,8 +5,21 @@
   <input type="text" id="title" name="title" required style="margin-right:1rem;">
   <label for="description"><strong>Descripción:</strong></label>
   <input type="text" id="description" name="description" required style="margin-right:1rem;">
-  <label for="category"><strong>Categoría:</strong></label>
-  <input type="text" id="category" name="category" required style="margin-right:1rem;">
+  
+  <label for="mainCategory"><strong>Categoría Principal:</strong></label>
+  <select id="mainCategory" name="mainCategory" required style="margin-right:1rem;">
+    <option value="">Seleccionar categoría...</option>
+    <option value="Alimentación">Alimentación</option>
+    <option value="Limpieza">Limpieza</option>
+    <option value="Higiene Personal">Higiene Personal</option>
+    <option value="Bebidas">Bebidas</option>
+    <option value="Hogar">Hogar</option>
+    <option value="Bebés y Niños">Bebés y Niños</option>
+  </select>
+  
+  <label for="subCategory"><strong>Subcategoría:</strong></label>
+  <input type="text" id="subCategory" name="subCategory" required style="margin-right:1rem;" placeholder="Ej: Lácteos, Frutas y Verduras">
+  
   <label for="code"><strong>Código:</strong></label>
   <input type="text" id="code" name="code" required style="margin-right:1rem;">
   <label for="price"><strong>Precio:</strong></label>

@@ -14,6 +14,7 @@ export const configureHandlebars = (app) => {
       layoutsDir: path.join(__dirname, "../views/layouts"),      
       partialsDir: path.join(__dirname, "../views/partials"),
       allowProtoPropertiesByDefault: true,
+      allowProtoMethodsByDefault: true,
       helpers: {
         multiply: (a, b) => a * b,
         sumCartTotal: function (cart) {
@@ -25,7 +26,18 @@ export const configureHandlebars = (app) => {
             return total;
           }, 0);
         },
-        eq: (a, b) => a === b
+        eq: (a, b) => a === b,
+        formatDate: function(date) {
+          if (!date) return '';
+          const d = new Date(date);
+          return d.toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        }
       }
     })
   );

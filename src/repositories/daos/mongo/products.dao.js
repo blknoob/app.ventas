@@ -1,4 +1,5 @@
 import Product from "./models/products.model.js";
+import { mapCategory } from "../../../utils/categoryMapper.js";
 
 class ProductsDAO {
   async create(productData) {
@@ -31,10 +32,25 @@ class ProductsDAO {
       console.log('🔍 ProductsDAO: Consultando productos en la base de datos...');
       const products = await Product.find({}).sort({ createdAt: -1 });
       console.log(`📊 ProductsDAO: Encontrados ${products.length} productos en BD`);
-      products.forEach((product, index) => {
-        console.log(`   ${index + 1}. ${product.title} - Código: ${product.code}`);
+      
+      // Mapear categorías automáticamente para productos que no tienen mainCategory/subCategory
+      const mappedProducts = products.map(product => {
+        const productObj = product.toObject();
+        
+        if (!productObj.mainCategory || !productObj.subCategory) {
+          const mapped = mapCategory(productObj.category);
+          productObj.mainCategory = mapped.mainCategory;
+          productObj.subCategory = mapped.subCategory;
+        }
+        
+        return productObj;
       });
-      return products;
+      
+      mappedProducts.forEach((product, index) => {
+        console.log(`   ${index + 1}. ${product.title} - ${product.mainCategory} > ${product.subCategory}`);
+      });
+      
+      return mappedProducts;
     } catch (error) {
       console.error('❌ Error en ProductsDAO.findAll:', error);
       throw new Error(`Error al obtener productos: ${error.message}`);
@@ -71,8 +87,12 @@ class ProductsDAO {
         throw new Error("Stock insuficiente");
       }
 
-      product.stock -= quantity;
-      return await product.save();
+      // Usar findByIdAndUpdate para evitar validación completa del schema
+      return await Product.findByIdAndUpdate(
+        productId,
+        { $inc: { stock: -quantity } },
+        { new: true, runValidators: false }
+      );
     } catch (error) {
       throw new Error(`Error al reducir stock: ${error.message}`);
     }

@@ -23,9 +23,19 @@ const productSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    category: {
+    mainCategory: {
       type: String,
       required: true,
+      enum: ['Alimentación', 'Limpieza', 'Higiene Personal', 'Bebidas', 'Hogar', 'Bebés y Niños'],
+    },
+    subCategory: {
+      type: String,
+      required: true,
+    },
+    // Mantener category para compatibilidad
+    category: {
+      type: String,
+      required: false,
     },
     image: {
       type: String, 

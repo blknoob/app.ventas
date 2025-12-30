@@ -42,9 +42,11 @@ class TicketsDAO {
 
   async findByUser(userEmail) {
     try {
-      return await Ticket.find({ purchaser: userEmail }).sort({
-        createdAt: -1,
-      });
+      return await Ticket.find({ purchaser: userEmail })
+        .populate('products.product', 'title description price image code')
+        .sort({
+          createdAt: -1,
+        });
     } catch (error) {
       throw new Error(`Error al buscar tickets del usuario: ${error.message}`);
     }

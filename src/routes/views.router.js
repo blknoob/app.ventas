@@ -97,6 +97,8 @@ router.get(
       products: req.products,
       user: res.locals.user || null,
       isPublic: true,
+      currentCategory: req.currentCategory,
+      currentSubCategory: req.currentSubCategory,
     });
   }
 );
@@ -139,46 +141,39 @@ import TicketsService from "../services/tickets.service.js";
 const ticketsService = new TicketsService();
 
 router.get("/tickets", authenticatePassport, userInSesion, async (req, res) => {
+  console.log('🚀 RUTA /tickets EJECUTÁNDOSE - Usuario:', req.user?.email);
+  
   try {
     const userEmail = req.user.email;
-    let tickets = await ticketsService.repository.findByUser(userEmail);
-    // Convertir a objetos planos y poblar títulos de productos si es posible
-    tickets = await Promise.all(
-      tickets.map(async (t) => {
-        let ticket = t.toObject ? t.toObject() : t;
-        if (ticket.products && ticket.products.length) {
-          ticket.products = await Promise.all(
-            ticket.products.map(async (item) => {
-              if (item.product && typeof item.product === "string") {
-                // Buscar el producto por ID para obtener el título
-                try {
-                  const ProductsService = (
-                    await import("../services/products.service.js")
-                  ).default;
-                  const productsService = new ProductsService();
-                  const prod = await productsService.getById(item.product);
-                  return {
-                    ...item,
-                    product: {
-                      _id: item.product,
-                      title: prod?.title || item.product,
-                    },
-                  };
-                } catch {
-                  return item;
-                }
-              }
-              return item;
-            })
-          );
-        }
-        return ticket;
-      })
-    );
-    res.render("users/tickets", { tickets });
+    const tickets = await ticketsService.repository.findByUser(userEmail);
+    
+    console.log('📦 Tickets encontrados:', tickets.length);
+    
+    // Convertir a JSON plano para evitar problemas con Handlebars
+    const ticketsData = tickets.map(ticket => ({
+      code: ticket.code,
+      amount: ticket.amount,
+      purchaser: ticket.purchaser,
+      createdAt: ticket.createdAt,
+      products: ticket.products.map(item => ({
+        product: item.product ? {
+          _id: item.product._id,
+          title: item.product.title,
+          code: item.product.code,
+          image: item.product.image
+        } : null,
+        quantity: item.quantity,
+        price: item.price
+      }))
+    }));
+    
+    console.log('📋 Enviando tickets procesados:', ticketsData.length);
+    console.log('🔍 Primer ticket:', JSON.stringify(ticketsData[0], null, 2));
+    
+    res.render("users/tickets", { tickets: ticketsData });
   } catch (error) {
     console.error("[ERROR /tickets]", error);
-    res.status(500).send("Error mostrando los tickets");
+    res.status(500).send("Error mostrando los tickets: " + error.message);
   }
 });
 
@@ -256,7 +251,7 @@ router.post(
   }),
   async (req, res) => {
     try {
-      const { title, description, category, code, price, stock } = req.body;
+      const { title, description, mainCategory, subCategory, code, price, stock } = req.body;
       let image = null;
       if (req.file) {
         image = `/images/${req.file.filename}`; // Guarda la ruta del archivo
@@ -266,7 +261,9 @@ router.post(
       await productsService.createProduct({
         title,
         description,
-        category,
+        mainCategory,
+        subCategory,
+        category: subCategory, // Mantener category para compatibilidad
         code,
         price,
         stock,
@@ -274,6 +271,7 @@ router.post(
       });
       res.redirect("/admin/products");
     } catch (error) {
+      console.error("Error en createProduct:", error);
       res.status(500).send("Error agregando producto");
     }
   }
@@ -335,7 +333,7 @@ router.post(
   }),
   async (req, res) => {
     try {
-      const { title, description, category, code, price, stock } = req.body;
+      const { title, description, mainCategory, subCategory, code, price, stock } = req.body;
       const productId = req.params.id;
       let image = null;
 
@@ -350,7 +348,9 @@ router.post(
       await productsService.updateProduct(productId, {
         title,
         description,
-        category,
+        mainCategory,
+        subCategory,
+        category: subCategory, // Mantener category para compatibilidad
         code,
         price,
         stock,
@@ -359,6 +359,7 @@ router.post(
 
       res.redirect("/admin/products");
     } catch (error) {
+      console.error("Error actualizando producto:", error);
       res.status(500).send("Error actualizando producto");
     }
   }
