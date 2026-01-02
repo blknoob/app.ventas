@@ -1,4 +1,42 @@
+/**
+ * @fileoverview Tests básicos para servicio de carritos
+ * 
+ * Suite de pruebas unitarias básicas que verifican la funcionalidad
+ * core del servicio de carritos sin dependencias complejas de ES modules.
+ * Utiliza Jest con CommonJS para compatibilidad y simplicidad.
+ * 
+ * COBERTURA DE TESTS:
+ * - Creación y estructura de objetos de carrito
+ * - Manejo de productos en carritos
+ * - Cálculo de totales de carrito
+ * - Validación de objetos de producto
+ * - Validación de objetos de usuario
+ * 
+ * ENFOQUE:
+ * - Tests unitarios aislados
+ * - Sin dependencias externas complejas
+ * - Validación de estructuras de datos
+ * - Verificación de lógica de negocio básica
+ * 
+ * TECNOLOGÍAS:
+ * - Jest como framework de testing
+ * - CommonJS para compatibilidad
+ * - Matchers estándar de Jest
+ * - Tests síncronos para simplicidad
+ * 
+ * @author Sistema SuperMercado Online
+ * @version 1.0.0
+ * @since 2026-01-02
+ */
+
 // Tests básicos para verificar funcionalidad sin ES modules complejos
+/**
+ * Suite de tests básicos para CartsService
+ * 
+ * Conjunto de pruebas unitarias que verifican la funcionalidad
+ * fundamental del servicio de carritos, incluyendo estructura
+ * de datos, cálculos y validaciones.
+ */
 describe('CartsService - Basic Tests', () => {
   test('should create cart object', () => {
     const cart = {

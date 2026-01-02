@@ -1,3 +1,75 @@
+/**
+ * TEMPLATES DE EMAIL Y MENSAJES - COMUNICACIÓN CON USUARIOS
+ * 
+ * Utilidades para generar templates de emails y mensajes del sistema
+ * Proporciona plantillas HTML/texto para diferentes tipos de comunicación
+ * 
+ * FUNCIONALIDADES PRINCIPALES:
+ * - Templates HTML profesionales para emails
+ * - Versiones texto plano para compatibilidad
+ * - Mensajes de éxito y error estandarizados
+ * - Personalización dinámica de contenido
+ * 
+ * TIPOS DE TEMPLATES:
+ * - Recuperación de contraseña: Email con enlace temporal
+ * - Mensajes de éxito: Confirmaciones de operaciones
+ * - Mensajes de error: Notificaciones de fallos
+ * - Templates responsivos y accesibles
+ * 
+ * CARACTERÍSTICAS DE DISEÑO:
+ * - Responsive design para móviles
+ * - Compatibilidad con clientes de email
+ * - Estilos inline para mejor renderizado
+ * - Branding consistente del sistema
+ * 
+ * CASOS DE USO:
+ * - Sistema de recuperación de contraseñas
+ * - Notificaciones de seguridad
+ * - Confirmaciones de registro
+ * - Comunicación automatizada con usuarios
+ * 
+ * INTEGRACIÓN DEL SISTEMA:
+ * - MailingService: Envío de emails
+ * - Controllers: Mensajes de respuesta
+ * - Middleware: Notificaciones de error
+ * - Auth system: Comunicación de seguridad
+ */
+
+/**
+ * TEMPLATE HTML DE RECUPERACIÓN DE CONTRASEÑA
+ * 
+ * Genera email HTML profesional para proceso de recuperación
+ * Incluye estilos responsivos y elementos de seguridad
+ * 
+ * @param {string} resetLink - URL del enlace de restablecimiento
+ * @param {string} userName - Nombre del usuario (default: 'Usuario')
+ * @returns {string} HTML completo del email
+ * 
+ * CARACTERÍSTICAS DEL TEMPLATE:
+ * - Header con branding del sistema
+ * - Botón prominente para acción principal
+ * - Advertencias de seguridad visibles
+ * - Alternativa de texto plano para enlace
+ * - Footer con información legal
+ * 
+ * ELEMENTOS DE SEGURIDAD:
+ * - Advertencia de expiración (1 hora)
+ * - Instrucción sobre ignorar si no solicitó
+ * - Nota sobre no reutilizar contraseña anterior
+ * - Enlace alternativo para casos de renderizado
+ * 
+ * RESPONSIVE DESIGN:
+ * - Máximo 600px de ancho
+ * - Estilos inline para compatibilidad
+ * - Typography optimizada para lectura
+ * - Colores accesibles y contrastados
+ * 
+ * COMPATIBILIDAD:
+ * - Outlook, Gmail, Apple Mail
+ * - Clientes web y móviles
+ * - Modo oscuro considerado
+ * - Degradación elegante
+ */
 export const getEmailTemplate = (resetLink, userName = 'Usuario') => `
     <!DOCTYPE html>
     <html lang="es">
@@ -48,12 +120,68 @@ export const getEmailTemplate = (resetLink, userName = 'Usuario') => `
     </html>
 `;
 
+/**
+ * CONFIGURACIÓN COMPLETA DE EMAIL DE RECUPERACIÓN
+ * 
+ * Genera objeto completo para envío de email con versiones HTML y texto
+ * Incluye subject line optimizado y contenido dual-format
+ * 
+ * @param {string} resetLink - URL del enlace de restablecimiento
+ * @param {string} expiresAt - Timestamp de expiración (no utilizado actualmente)
+ * @returns {Object} Configuración completa de email
+ * 
+ * ESTRUCTURA DE RESPUESTA:
+ * {
+ *   subject: string,  // Línea de asunto del email
+ *   html: string,     // Versión HTML del contenido
+ *   text: string      // Versión texto plano
+ * }
+ * 
+ * VENTAJAS DUAL-FORMAT:
+ * - HTML: Experiencia rica y visual
+ * - Texto: Compatibilidad universal
+ * - Fallback: Clientes que bloquean HTML
+ * - Accesibilidad: Lectores de pantalla
+ * 
+ * INTEGRACIÓN:
+ * - MailingService utiliza objeto completo
+ * - Nodemailer procesa ambos formatos
+ * - Cliente decide qué versión mostrar
+ */
 export const getPasswordRecoveryEmailTemplate = (resetLink, expiresAt) => ({
   subject: "Recuperación de Contraseña",
   html: getEmailTemplate(resetLink, 'Usuario'),
   text: getPasswordRecoveryTextTemplate(resetLink, 'Usuario')
 });
 
+/**
+ * TEMPLATE DE TEXTO PLANO PARA RECUPERACIÓN
+ * 
+ * Versión texto plano del email de recuperación
+ * Compatible con todos los clientes de email
+ * 
+ * @param {string} resetLink - URL del enlace de restablecimiento
+ * @param {string} userName - Nombre del usuario (default: 'Usuario')
+ * @returns {string} Contenido en texto plano
+ * 
+ * CARACTERÍSTICAS:
+ * - Formato limpio y legible
+ * - Información esencial sin decoraciones
+ * - Mismas advertencias de seguridad
+ * - Separadores visuales ASCII
+ * 
+ * VENTAJAS:
+ * - Compatible con clientes básicos
+ * - Rápida carga y procesamiento
+ * - Accesible para lectores de pantalla
+ * - No bloqueado por filtros de spam
+ * 
+ * USO:
+ * - Fallback automático si HTML falla
+ * - Clientes que prefieren texto
+ * - Entornos con ancho de banda limitado
+ * - Sistemas legacy de email
+ */
 export const getPasswordRecoveryTextTemplate = (resetLink, userName = 'Usuario') => `
 Hola ${userName},
 
@@ -73,6 +201,34 @@ Este email fue enviado automáticamente, por favor no respondas a este mensaje.
 © 2025 Ecommerce - Sistema de Recuperación de Contraseñas
 `;
 
+/**
+ * GENERADOR DE MENSAJES DE ÉXITO
+ * 
+ * Proporciona mensajes estandarizados para operaciones exitosas
+ * Mantiene consistencia en comunicación con usuarios
+ * 
+ * @param {string} type - Tipo de operación exitosa
+ * @returns {string} Mensaje de éxito apropiado
+ * 
+ * TIPOS SOPORTADOS:
+ * - password_reset: Confirmación de cambio de contraseña
+ * - login: Bienvenida tras inicio de sesión
+ * - logout: Despedida tras cerrar sesión
+ * - register: Confirmación de registro exitoso
+ * - recovery_sent: Confirmación de envío de email
+ * 
+ * CARACTERÍSTICAS:
+ * - Mensajes amigables y claros
+ * - Tono profesional pero cálido
+ * - Fallback para tipos no definidos
+ * - Información sobre próximos pasos
+ * 
+ * CASOS DE USO:
+ * - Respuestas de API exitosas
+ * - Notificaciones en interfaz web
+ * - Confirmaciones de operaciones
+ * - Feedback positivo al usuario
+ */
 export const getSuccessMessage = (type) => {
   const messages = {
     password_reset: 'Contraseña restablecida exitosamente. Ya puedes iniciar sesión con tu nueva contraseña.',
@@ -84,6 +240,42 @@ export const getSuccessMessage = (type) => {
   return messages[type] || 'Operación completada exitosamente.';
 };
 
+/**
+ * GENERADOR DE MENSAJES DE ERROR
+ * 
+ * Proporciona mensajes de error estandarizados y user-friendly
+ * Evita exposición de detalles técnicos sensibles
+ * 
+ * @param {string} type - Tipo de error ocurrido
+ * @returns {string} Mensaje de error apropiado para mostrar al usuario
+ * 
+ * TIPOS DE ERROR CUBIERTOS:
+ * - invalid_credentials: Credenciales incorrectas
+ * - token_expired: Token de recuperación expirado
+ * - token_invalid: Token de recuperación inválido
+ * - same_password: Intento de usar misma contraseña
+ * - email_not_found: Email no registrado en sistema
+ * - unauthorized: Permisos insuficientes
+ * - server_error: Error interno genérico
+ * 
+ * PRINCIPIOS DE SEGURIDAD:
+ * - No revelar detalles internos del sistema
+ * - Evitar información que ayude a atacantes
+ * - Mensajes consistentes para casos similares
+ * - Orientación para resolución cuando es posible
+ * 
+ * CARACTERÍSTICAS:
+ * - Lenguaje claro y no técnico
+ * - Tono profesional sin ser áspero
+ * - Sugerencias de solución cuando es apropiado
+ * - Fallback genérico para errores no mapeados
+ * 
+ * CASOS DE USO:
+ * - Respuestas de error de API
+ * - Notificaciones de fallo en interfaz
+ * - Validaciones de formulario
+ * - Manejo de excepciones user-facing
+ */
 export const getErrorMessage = (type) => {
   const messages = {
     invalid_credentials: 'Email o contraseña incorrectos.',

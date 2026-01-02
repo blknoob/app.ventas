@@ -1,6 +1,57 @@
+/**
+ * @fileoverview Sistema centralizado de manejo de errores
+ * 
+ * Middleware global para captura y procesamiento de errores en toda la aplicación.
+ * Proporciona respuestas consistentes y logging detallado para debugging y monitoreo.
+ * Incluye clases de error personalizadas y manejo diferenciado por tipo de cliente.
+ * 
+ * CARACTERÍSTICAS:
+ * - Logging estructurado de errores
+ * - Respuestas adaptativas (HTML/JSON)
+ * - Clases de error personalizadas
+ * - Manejo de errores 404
+ * - Ocultación de detalles en producción
+ * 
+ * SEGURIDAD:
+ * - No exposición de stack traces en producción
+ * - Logging de intentos maliciosos
+ * - Códigos de error estandarizados
+ * - Manejo seguro de información sensible
+ * 
+ * @author Sistema SuperMercado Online
+ * @version 1.0.0
+ * @since 2026-01-02
+ */
+
 import { logger } from "../utils/logger.js";
 
-// Middleware de manejo de errores centralizado
+/**
+ * Middleware principal de manejo de errores
+ * 
+ * Captura todos los errores no manejados en la aplicación y
+ * proporciona respuestas consistentes. Registra detalles completos
+ * para debugging y presenta información apropiada al usuario.
+ * 
+ * FUNCIONALIDADES:
+ * - Logging detallado con contexto de request
+ * - Respuestas HTML para navegadores
+ * - Respuestas JSON para APIs
+ * - Ocultación de detalles sensibles en producción
+ * - Códigos de estado HTTP apropiados
+ * 
+ * CASOS DE USO:
+ * - Último middleware en la cadena de Express
+ * - Captura de errores de base de datos
+ * - Manejo de errores de validación
+ * - Errores de autenticación y autorización
+ * 
+ * @function errorHandler
+ * @param {Error} err - Objeto de error capturado
+ * @param {Object} req - Objeto request de Express
+ * @param {Object} res - Objeto response de Express
+ * @param {Function} next - Función next de Express
+ * @returns {void}
+ */
 export const errorHandler = (err, req, res, next) => {
   // Log del error
   logger.error('Error Handler:', {
@@ -66,7 +117,25 @@ export const errorHandler = (err, req, res, next) => {
   }
 };
 
-// Middleware para rutas no encontradas
+/**
+ * Middleware para manejo de rutas no encontradas (404)
+ * 
+ * Captura requests que no coinciden con ninguna ruta definida
+ * y genera un error 404 apropiado. Debe colocarse antes del
+ * errorHandler en la cadena de middlewares.
+ * 
+ * CARACTERÍSTICAS:
+ * - Generación automática de error 404
+ * - Mensaje descriptivo con ruta solicitada
+ * - Código de error estandarizado
+ * - Integración con sistema de logging
+ * 
+ * @function notFoundHandler
+ * @param {Object} req - Objeto request de Express
+ * @param {Object} res - Objeto response de Express
+ * @param {Function} next - Función next que pasa error al errorHandler
+ * @returns {void}
+ */
 export const notFoundHandler = (req, res, next) => {
   const err = new Error(`Ruta ${req.originalUrl} no encontrada`);
   err.statusCode = 404;
@@ -110,7 +179,25 @@ function getErrorCode(statusCode) {
   return codes[statusCode] || 'UNKNOWN_ERROR';
 }
 
-// Clase base para errores personalizados
+/**
+ * Clase base para errores personalizados de la aplicación
+ * 
+ * Extiende la clase Error nativa para proporcionar información
+ * adicional como códigos de estado HTTP y códigos de error
+ * personalizados para mejor manejo y debugging.
+ * 
+ * PROPIEDADES:
+ * - message: Mensaje descriptivo del error
+ * - statusCode: Código de estado HTTP apropiado
+ * - code: Código de error personalizado para APIs
+ * - isOperational: Indica si es un error operacional esperado
+ * 
+ * @class AppError
+ * @extends Error
+ * @param {string} message - Mensaje descriptivo del error
+ * @param {number} statusCode - Código de estado HTTP (default: 500)
+ * @param {string|null} code - Código de error personalizado
+ */
 export class AppError extends Error {
   constructor(message, statusCode = 500, code = null) {
     super(message);

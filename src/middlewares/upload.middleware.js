@@ -1,3 +1,29 @@
+/**
+ * @fileoverview Middleware seguro para subida de archivos
+ * 
+ * Sistema completo de manejo de uploads con validaciones de seguridad
+ * según estándares OWASP. Incluye sanitización de nombres, validación
+ * de tipos MIME, limitación de tamaños y almacenamiento seguro.
+ * 
+ * PROTECCIONES OWASP:
+ * - A01:2021 Broken Access Control: Validación de tipos de archivo
+ * - A03:2021 Injection: Sanitización de nombres de archivo
+ * - A05:2021 Security Misconfiguration: Configuración segura de multer
+ * - A08:2021 Software Integrity Failures: Validación de integridad
+ * 
+ * CARACTERÍSTICAS:
+ * - Validación estricta de tipos MIME
+ * - Sanitización de nombres de archivo
+ * - Limitaciones de tamaño configurables
+ * - Almacenamiento seguro con nombres aleatorios
+ * - Logging de eventos de subida
+ * - Manejo de errores de multer
+ * 
+ * @author Sistema SuperMercado Online
+ * @version 1.0.0
+ * @since 2026-01-02
+ */
+
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -48,7 +74,30 @@ const sanitizeFilename = (filename) => {
     .substring(0, 100);              // Limitar longitud
 };
 
-// Configuración de storage segura
+/**
+ * Crea configuración de almacenamiento seguro para multer
+ * 
+ * Genera configuración de diskStorage con nombres de archivo
+ * seguros y creación automática de directorios. Implementa
+ * sanitización y generación de nombres únicos.
+ * 
+ * SEGURIDAD:
+ * - Nombres de archivo aleatorios con timestamp
+ * - Sanitización de caracteres peligrosos
+ * - Limitación de longitud de nombres
+ * - Creación segura de directorios
+ * 
+ * CASOS DE USO:
+ * - Configuración base para diferentes tipos de upload
+ * - Almacenamiento de imágenes de productos
+ * - Subida de comprobantes de pago
+ * - Documentos administrativos
+ * 
+ * @function createSecureStorage
+ * @param {string} destination - Directorio de destino (default: 'uploads/')
+ * @param {Object} options - Opciones adicionales de configuración
+ * @returns {multer.StorageEngine} Configuración de storage para multer
+ */
 export const createSecureStorage = (destination = 'uploads/', options = {}) => {
   // Crear directorio si no existe
   if (!fs.existsSync(destination)) {
@@ -72,7 +121,32 @@ export const createSecureStorage = (destination = 'uploads/', options = {}) => {
   });
 };
 
-// Middleware de validación de archivos
+/**
+ * Middleware de validación post-upload de archivos
+ * 
+ * Valida archivos después de la subida con multer, verificando
+ * tipo MIME, tamaño y requisitos de presencia. Elimina archivos
+ * que no cumplen validaciones para evitar almacenamiento inseguro.
+ * 
+ * VALIDACIONES:
+ * - Presencia de archivo (si es requerido)
+ * - Tipo MIME contra lista permitida
+ * - Tamaño máximo configurable
+ * - Integridad de metadata del archivo
+ * 
+ * SEGURIDAD:
+ * - Eliminación automática de archivos inválidos
+ * - Logging de intentos de subida maliciosa
+ * - Validación estricta de tipos MIME
+ * - Prevención de ataques de tamaño de archivo
+ * 
+ * @function validateFile
+ * @param {Object} options - Opciones de validación
+ * @param {string[]} options.allowedMimeTypes - Tipos MIME permitidos
+ * @param {number} options.maxFileSize - Tamaño máximo en bytes
+ * @param {boolean} options.required - Si el archivo es obligatorio
+ * @returns {Function} Middleware de Express para validación
+ */
 export const validateFile = (options = {}) => {
   const {
     allowedMimeTypes = [...ALLOWED_MIME_TYPES.images, ...ALLOWED_MIME_TYPES.documents],
@@ -150,7 +224,28 @@ export const validateFile = (options = {}) => {
   };
 };
 
-// Configuración de multer segura para comprobantes de pago
+/**
+ * Crea configuración de multer para comprobantes de pago
+ * 
+ * Configuración especializada para subida de imágenes de
+ * comprobantes de pago con validaciones específicas y
+ * almacenamiento en directorio público.
+ * 
+ * CONFIGURACIÓN:
+ * - Directorio: public/comprobantes/
+ * - Tamaño máximo: 5MB
+ * - Tipos permitidos: JPEG, PNG, GIF, WebP
+ * - Un archivo por request
+ * 
+ * CASOS DE USO:
+ * - Subida de capturas de transferencias
+ * - Comprobantes de pago móvil
+ * - Screenshots de transacciones
+ * - Evidencia de pagos en efectivo
+ * 
+ * @function createPaymentProofUpload
+ * @returns {Function} Middleware de multer configurado
+ */
 export const createPaymentProofUpload = () => {
   const storage = createSecureStorage('public/comprobantes/');
   
@@ -173,7 +268,27 @@ export const createPaymentProofUpload = () => {
   });
 };
 
-// Configuración de multer segura para documentos generales
+/**
+ * Crea configuración de multer para documentos generales
+ * 
+ * Configuración para subida de documentos administrativos
+ * con soporte para múltiples formatos y mayor tamaño máximo.
+ * 
+ * CONFIGURACIÓN:
+ * - Directorio: uploads/documents/
+ * - Tamaño máximo: 10MB
+ * - Tipos permitidos: PDF, imágenes, texto plano
+ * - Un archivo por request
+ * 
+ * CASOS DE USO:
+ * - Documentos administrativos
+ * - Reportes en PDF
+ * - Imágenes de productos
+ * - Archivos de texto de configuración
+ * 
+ * @function createDocumentUpload
+ * @returns {Function} Middleware de multer configurado
+ */
 export const createDocumentUpload = () => {
   const storage = createSecureStorage('uploads/documents/');
   
@@ -195,7 +310,31 @@ export const createDocumentUpload = () => {
   });
 };
 
-// Manejo de errores de multer
+/**
+ * Middleware de manejo de errores de multer
+ * 
+ * Procesa errores específicos de multer y proporciona
+ * mensajes de error user-friendly. Registra eventos
+ * de seguridad para intentos de subida maliciosa.
+ * 
+ * ERRORES MANEJADOS:
+ * - LIMIT_FILE_SIZE: Archivo demasiado grande
+ * - LIMIT_FILE_COUNT: Demasiados archivos
+ * - LIMIT_UNEXPECTED_FILE: Campo inesperado
+ * - INVALID_FILE_TYPE: Tipo de archivo no permitido
+ * 
+ * CARACTERÍSTICAS:
+ * - Logging de errores de seguridad
+ * - Mensajes localizados en español
+ * - Respuestas JSON estructuradas
+ * - Prevención de exposición de detalles internos
+ * 
+ * @function handleMulterError
+ * @param {Error} error - Error de multer o personalizado
+ * @param {Object} req - Request de Express
+ * @param {Object} res - Response de Express
+ * @param {Function} next - Función next de Express
+ */
 export const handleMulterError = (error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     logSecurityEvent('MULTER_ERROR', {

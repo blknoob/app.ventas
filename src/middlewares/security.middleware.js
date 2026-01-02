@@ -1,3 +1,29 @@
+/**
+ * @fileoverview Middlewares de seguridad avanzados
+ * 
+ * Conjunto completo de middlewares de seguridad que implementan
+ * prácticas de OWASP para protección contra ataques comunes.
+ * Incluye rate limiting, sanitización, detección de ataques y headers de seguridad.
+ * 
+ * PROTECCIONES IMPLEMENTADAS:
+ * - A01:2021 Broken Access Control: Rate limiting
+ * - A03:2021 Injection: Sanitización y detección SQL injection
+ * - A05:2021 Security Misconfiguration: Headers de seguridad
+ * - A06:2021 Vulnerable Components: Validación de entrada
+ * - A09:2021 Security Logging: Logging detallado de eventos
+ * 
+ * CARACTERÍSTICAS:
+ * - Rate limiting en memoria configurable
+ * - Sanitización automática de entrada
+ * - Detección de patrones de ataque
+ * - Headers de seguridad modernos
+ * - Logging de eventos de seguridad
+ * 
+ * @author Sistema SuperMercado Online
+ * @version 1.0.0
+ * @since 2026-01-02
+ */
+
 import { logger, logSecurityEvent, logRateLimit } from "../utils/logger.js";
 
 // Rate limiting simple en memoria
@@ -22,7 +48,30 @@ const cleanupExpiredEntries = () => {
   }
 };
 
-// Middleware de rate limiting
+/**
+ * Middleware de rate limiting configurable
+ * 
+ * Implementa limitación de velocidad por IP y tipo de operación.
+ * Utiliza almacenamiento en memoria con limpieza automática de
+ * entradas expiradas. Cumple con recomendaciones OWASP.
+ * 
+ * CONFIGURACIONES DISPONIBLES:
+ * - auth: 3 intentos/15min (protección login)
+ * - api: 100 requests/min (uso general API)
+ * - strict: 5 requests/15min (operaciones críticas)
+ * - resetPassword: 2 requests/hora
+ * - registration: 5 registros/día
+ * 
+ * CARACTERÍSTICAS:
+ * - Limpieza automática de entradas expiradas
+ * - Headers X-RateLimit-* en respuestas
+ * - Logging de violaciones de límites
+ * - Respuestas adaptativas (HTML/JSON)
+ * 
+ * @function rateLimit
+ * @param {string} type - Tipo de rate limit a aplicar
+ * @returns {Function} Middleware configurado de Express
+ */
 export const rateLimit = (type = 'api') => {
   const config = RATE_LIMITS[type];
 
@@ -93,7 +142,31 @@ export const rateLimit = (type = 'api') => {
   };
 };
 
-// Middleware para sanitizar entrada
+/**
+ * Middleware de sanitización de entrada
+ * 
+ * Limpia y sanitiza todos los datos de entrada (body, params)
+ * para prevenir ataques de inyección y caracteres maliciosos.
+ * Implementa validaciones recursivas para objetos anidados.
+ * 
+ * SANITIZACIONES APLICADAS:
+ * - Remoción de caracteres de control (0x00-0x1F, 0x7F)
+ * - Limitación de longitud de strings (10,000 caracteres)
+ * - Limitación de tamaño de arrays (100 elementos)
+ * - Validación de claves de objeto (solo alfanuméricos)
+ * - Normalización de espacios en blanco
+ * 
+ * CASOS DE USO:
+ * - Protección contra inyección NoSQL
+ * - Prevención de caracteres de control maliciosos
+ * - Limitación de tamaño de payload
+ * - Normalización de datos de entrada
+ * 
+ * @function sanitizeInput
+ * @param {Object} req - Request de Express
+ * @param {Object} res - Response de Express
+ * @param {Function} next - Función next de Express
+ */
 export const sanitizeInput = (req, res, next) => {
   // Función recursiva para sanitizar objetos
   const sanitizeValue = (value) => {
@@ -135,7 +208,32 @@ export const sanitizeInput = (req, res, next) => {
   next();
 };
 
-// Middleware para validar headers de seguridad
+/**
+ * Middleware de headers de seguridad
+ * 
+ * Configura headers HTTP de seguridad modernos para protección
+ * contra ataques comunes. Implementa recomendaciones OWASP
+ * para headers de respuesta seguros.
+ * 
+ * HEADERS CONFIGURADOS:
+ * - X-Content-Type-Options: nosniff (previene MIME sniffing)
+ * - X-Frame-Options: DENY (previene clickjacking)
+ * - X-XSS-Protection: 1; mode=block (protección XSS legacy)
+ * - Referrer-Policy: strict-origin-when-cross-origin
+ * - Permissions-Policy: Deshabilita APIs sensibles
+ * - Strict-Transport-Security: Solo en producción (HSTS)
+ * 
+ * CASOS DE USO:
+ * - Protección contra clickjacking
+ * - Prevención de ataques XSS
+ * - Control de políticas de referrer
+ * - Limitación de APIs del navegador
+ * 
+ * @function securityHeaders
+ * @param {Object} req - Request de Express
+ * @param {Object} res - Response de Express
+ * @param {Function} next - Función next de Express
+ */
 export const securityHeaders = (req, res, next) => {
   // Headers de seguridad básicos
   res.set({
@@ -154,7 +252,36 @@ export const securityHeaders = (req, res, next) => {
   next();
 };
 
-// Middleware para detectar ataques comunes
+/**
+ * Middleware de detección de ataques
+ * 
+ * Analiza requests en busca de patrones de ataque comunes
+ * y bloquea solicitudes sospechosas. Registra intentos
+ * maliciosos para análisis forense.
+ * 
+ * ATAQUES DETECTADOS:
+ * - Inyección SQL: Patrones UNION, SELECT, INSERT, etc.
+ * - Path Traversal: Secuencias ../ y variantes encoded
+ * - Caracteres de control maliciosos
+ * - Patrones de shellcode
+ * 
+ * RESPUESTA A ATAQUES:
+ * - Bloqueo inmediato de la solicitud
+ * - Logging detallado del evento de seguridad
+ * - Respuesta 403 Forbidden
+ * - No exposición de detalles técnicos
+ * 
+ * CASOS DE USO:
+ * - Protección proactiva contra inyecciones
+ * - Detección de bots maliciosos
+ * - Monitoreo de intentos de intrusión
+ * - Análisis forense de ataques
+ * 
+ * @function detectAttacks
+ * @param {Object} req - Request de Express
+ * @param {Object} res - Response de Express
+ * @param {Function} next - Función next de Express
+ */
 export const detectAttacks = (req, res, next) => {
   const suspicious = [];
 
@@ -207,7 +334,30 @@ export const detectAttacks = (req, res, next) => {
   next();
 };
 
-// Middleware para logging de seguridad
+/**
+ * Middleware de logging de seguridad
+ * 
+ * Registra requests que pueden indicar actividad sospechosa
+ * o problemas de rendimiento. Monitorea duración de requests
+ * y códigos de estado para detección de anomalías.
+ * 
+ * EVENTOS REGISTRADOS:
+ * - Requests que tardan más de 5 segundos
+ * - Responses con código de estado >= 400
+ * - Información de contexto (IP, User-Agent, usuario)
+ * - Métricas de rendimiento
+ * 
+ * UTILIDAD:
+ * - Detección de ataques de denegación de servicio
+ * - Monitoreo de rendimiento de la aplicación
+ * - Análisis de patrones de uso malicioso
+ * - Auditoría de acceso a recursos
+ * 
+ * @function securityLogger
+ * @param {Object} req - Request de Express
+ * @param {Object} res - Response de Express
+ * @param {Function} next - Función next de Express
+ */
 export const securityLogger = (req, res, next) => {
   const start = Date.now();
 

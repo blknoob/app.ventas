@@ -1,3 +1,45 @@
+/**
+ * ROUTER DE VISTAS - RENDERIZADO DE TEMPLATES Y NAVEGACIÓN WEB
+ * 
+ * Router principal que maneja todas las vistas web del sistema
+ * Combina funcionalidades públicas, autenticadas y administrativas
+ * 
+ * FUNCIONALIDADES PRINCIPALES:
+ * - Renderizado de páginas web con Handlebars
+ * - Gestión completa del carrito de compras (vistas)
+ * - Proceso de checkout y pago (frontend)
+ * - Panel administrativo con interfaces de gestión
+ * - Autenticación y registro de usuarios (vistas)
+ * - Catálogo público de productos
+ * 
+ * NIVELES DE ACCESO:
+ * - Públicas: Home, login, register, catálogo
+ * - Autenticadas: Perfil, carrito, tickets, checkout
+ * - Administrativas: Panel admin, gestión de productos/usuarios
+ * 
+ * CARACTERÍSTICAS ESPECIALES:
+ * - Upload de archivos con validaciones OWASP
+ * - Procesamiento de pagos manual (Pago Móvil, Zelle)
+ * - Middleware de autenticación basado en Passport
+ * - Validaciones robustas de datos de entrada
+ * - Manejo seguro de archivos multimedia
+ * 
+ * MIDDLEWARES INTEGRADOS:
+ * - authenticatePassport: Autenticación vía Passport
+ * - requireAdmin: Validación de rol administrativo
+ * - userInSesion: Contexto de usuario en templates
+ * - validateFile: Validación segura de uploads
+ * 
+ * CONTROLADORES UTILIZADOS:
+ * - ProductsViewController: Preparación de datos de productos
+ * - UsersViewController: Renderizado de perfiles
+ * - cart.controller: Funciones de carrito
+ * - PaymentsService: Procesamiento de pagos
+ * - TicketsService: Gestión de comprobantes
+ * 
+ * BASE PATH: / (raíz del dominio)
+ * SECURITY LEVELS: Variado según endpoint (Público a Administrativo)
+ */
 // RUTAS VISTAS
 import { Router } from "express";
 import {
@@ -27,6 +69,13 @@ const productsViewController = new ProductsViewController();
 const usersViewController = new UsersViewController();
 const paymentsService = new PaymentsService();
 
+/**
+ * CONFIGURACIONES SEGURAS DE MULTER - OWASP COMPLIANCE
+ * 
+ * Configuración especializada para diferentes tipos de uploads
+ * Implementa estándares de seguridad OWASP para manejo de archivos
+ */
+
 // OWASP - Configuraciones seguras de multer
 const paymentProofUpload = createPaymentProofUpload();
 
@@ -50,6 +99,25 @@ const productImageUpload = multer({
   }
 });
 
+/**
+ * RUTAS DE CARRITO Y CHECKOUT (VISTAS WEB)
+ * 
+ * Endpoints para el proceso de compra vía interfaz web
+ * Todas requieren autenticación y sesión activa
+ */
+
+/**
+ * FINALIZAR COMPRA DESDE VISTA
+ * POST /cart/checkout
+ * 
+ * Procesa la finalización de compra desde la interfaz web
+ * Convierte carrito en orden y procede al checkout
+ * 
+ * MIDDLEWARE: authenticatePassport + userInSesion
+ * CONTROLLER: cart.controller.processCheckout
+ * RESPONSE: Redirección a proceso de pago
+ * SECURITY: Autenticación requerida, validaciones de stock
+ */
 // Finalizar compra y generar orden desde la vista
 router.post(
   "/cart/checkout",
@@ -58,6 +126,18 @@ router.post(
   processCheckout
 );
 
+/**
+ * ELIMINAR PRODUCTO DEL CARRITO (VISTA)
+ * POST /cart/remove
+ * 
+ * Endpoint para remover producto del carrito vía interfaz web
+ * Maneja la eliminación desde formularios HTML
+ * 
+ * MIDDLEWARE: authenticatePassport + userInSesion
+ * CONTROLLER: cart.controller.removeFromCart
+ * RESPONSE: Redirección de vuelta al carrito
+ * SECURITY: Autenticación requerida, validación de propiedad
+ */
 // Quitar producto del carrito desde la vista
 router.post(
   "/cart/remove",
@@ -66,19 +146,71 @@ router.post(
   removeFromCart
 );
 
-// Rutas públicas
+/**
+ * RUTAS PÚBLICAS - AUTENTICACIÓN Y NAVEGACIÓN
+ * 
+ * Endpoints públicos para autenticación y navegación básica
+ * Accesibles sin autenticación previa
+ */
+
+/**
+ * PÁGINA DE INICIO DE SESIÓN
+ * GET /login
+ * 
+ * Renderiza el formulario de login
+ * Redirige a home si ya está autenticado
+ * 
+ * MIDDLEWARE: redirectPassport (redirige si autenticado)
+ * TEMPLATE: auth/login.hbs
+ * RESPONSE: Formulario de inicio de sesión
+ */
 router.get("/login", redirectPassport, (req, res) => {
   res.render("auth/login");
 });
 
+/**
+ * PÁGINA DE REGISTRO
+ * GET /register
+ * 
+ * Renderiza el formulario de registro de nueva cuenta
+ * Redirige a home si ya está autenticado
+ * 
+ * MIDDLEWARE: redirectPassport (redirige si autenticado)
+ * TEMPLATE: auth/register.hbs
+ * RESPONSE: Formulario de registro de usuario
+ */
 router.get("/register", redirectPassport, (req, res) => {
   res.render("auth/register");
 });
 
+/**
+ * CERRAR SESIÓN
+ * GET /logout
+ * 
+ * Procesa el cierre de sesión del usuario
+ * Limpia cookies y redirige a página principal
+ * 
+ * MIDDLEWARE: Ninguno (público)
+ * RESPONSE: Redirección a home con sesión cerrada
+ * SECURITY: Limpieza completa de tokens y cookies
+ */
 router.get("/logout", (req, res) => {
   res.clearCookie("access_token");
   res.redirect("/");
 });
+
+/**
+ * PÁGINA DE RESTABLECIMIENTO DE CONTRASEÑA
+ * GET /reset-password
+ * 
+ * Renderiza formulario para establecer nueva contraseña
+ * Utiliza token de seguridad para validación
+ * 
+ * QUERY PARAMS: token - Token de restablecimiento
+ * TEMPLATE: auth/resetPassword.hbs
+ * RESPONSE: Formulario de nueva contraseña
+ * SECURITY: Validación de token temporal
+ */
 
 router.get("/reset-password", (req, res) => {
   const { token } = req.query;
@@ -87,6 +219,24 @@ router.get("/reset-password", (req, res) => {
   });
 });
 
+/**
+ * PÁGINA PRINCIPAL - CATÁLOGO PÚBLICO
+ * GET /
+ * 
+ * Página de inicio con catálogo completo de productos
+ * Accesible públicamente con contexto de usuario opcional
+ * 
+ * FUNCIONALIDADES:
+ * - Mostrar productos disponibles
+ * - Filtrado por categorías y subcategorías
+ * - Contexto de usuario si está logueado
+ * - Navegación pública del catálogo
+ * 
+ * MIDDLEWARE: userInSesion + ProductsViewController.getProductsView
+ * TEMPLATE: index.hbs
+ * CONTEXT: products, user, isPublic, currentCategory, currentSubCategory
+ * RESPONSE: Página principal con catálogo
+ */
 // Página principal pública - Catálogo de productos
 router.get(
   "/",
@@ -103,6 +253,25 @@ router.get(
   }
 );
 
+/**
+ * RUTAS DE USUARIO AUTENTICADO
+ * 
+ * Endpoints que requieren autenticación para acceso
+ * Proporcionan funcionalidades personalizadas
+ */
+
+/**
+ * PERFIL DE USUARIO ACTUAL
+ * GET /current
+ * 
+ * Muestra el perfil del usuario autenticado
+ * Redirige a login si no está autenticado
+ * 
+ * MIDDLEWARE: authenticatePassport + userInSesion
+ * CONTROLLER: UsersViewController.getCurrentView
+ * TEMPLATE: users/current.hbs
+ * RESPONSE: Página de perfil de usuario
+ */
 router.get(
   "/current",
   authenticatePassport,
@@ -110,8 +279,39 @@ router.get(
   usersViewController.getCurrentView
 );
 
+/**
+ * VISTA DEL CARRITO DE COMPRAS
+ * GET /cart
+ * 
+ * Muestra el carrito actual del usuario con productos y totales
+ * Incluye herramientas de gestión de carrito
+ * 
+ * MIDDLEWARE: authenticatePassport + userInSesion
+ * CONTROLLER: cart.controller.getCartView
+ * TEMPLATE: users/cart.hbs
+ * RESPONSE: Página de carrito con productos y totales
+ */
 router.get("/cart", authenticatePassport, userInSesion, getCartView);
 
+/**
+ * RUTAS DE GESTIÓN DEL CARRITO (VISTAS WEB)
+ * 
+ * Endpoints para manipular el carrito desde la interfaz web
+ * Todas requieren autenticación y validación de datos
+ */
+
+/**
+ * AGREGAR PRODUCTO AL CARRITO (VISTA)
+ * POST /cart/add
+ * 
+ * Añade producto al carrito desde formularios web
+ * Incluye validación de datos de carrito
+ * 
+ * MIDDLEWARE: authenticatePassport + userInSesion + validateCartData
+ * CONTROLLER: cart.controller.addToCart
+ * BODY: productId, quantity
+ * RESPONSE: Redirección al carrito actualizado
+ */
 router.post(
   "/cart/add",
   authenticatePassport,
@@ -120,7 +320,18 @@ router.post(
   addToCart
 );
 
-// Actualizar cantidad de producto en carrito
+/**
+ * ACTUALIZAR CANTIDAD EN CARRITO (VISTA)
+ * POST /cart/update
+ * 
+ * Modifica cantidad de producto específico en carrito
+ * Permite incrementar, decrementar o establecer cantidad
+ * 
+ * MIDDLEWARE: authenticatePassport + userInSesion + validateCartData
+ * CONTROLLER: cart.controller.updateCartQuantity
+ * BODY: productId, quantity
+ * RESPONSE: Redirección al carrito con cantidad actualizada
+ */
 router.post(
   "/cart/update",
   authenticatePassport,
@@ -129,6 +340,17 @@ router.post(
   updateCartQuantity
 );
 
+/**
+ * VACIAR CARRITO COMPLETO (VISTA)
+ * POST /cart/clear
+ * 
+ * Elimina todos los productos del carrito
+ * Operación de limpieza completa
+ * 
+ * MIDDLEWARE: authenticatePassport + userInSesion
+ * CONTROLLER: cart.controller.clearCart
+ * RESPONSE: Redirección al carrito vacío
+ */
 // Vaciar carrito
 router.post(
   "/cart/clear",
@@ -188,6 +410,25 @@ router.get("/reset-password", (req, res) => {
   res.render("auth/resetPassword", { token });
 });
 
+/**
+ * RUTAS ADMINISTRATIVAS - PANEL DE ADMINISTRACIÓN
+ * 
+ * Conjunto de endpoints para gestión administrativa del sistema
+ * Requieren autenticación y rol de administrador
+ */
+
+/**
+ * PANEL PRINCIPAL DE ADMINISTRACIÓN
+ * GET /admin/panel
+ * 
+ * Página principal del panel administrativo
+ * Dashboard con acceso a todas las funciones admin
+ * 
+ * MIDDLEWARE: authenticatePassport + requireAdmin + userInSesion
+ * TEMPLATE: admin/adminPanel.hbs
+ * RESPONSE: Dashboard administrativo
+ * SECURITY: Solo administradores verificados
+ */
 // Rutas admin
 router.get(
   "/admin/panel",
@@ -385,6 +626,27 @@ router.post(
   }
 );
 
+/**
+ * === RUTAS DE CHECKOUT Y PROCESAMIENTO DE PAGOS ===
+ * 
+ * Sección especializada en el proceso de finalización de compra
+ * Incluye selección de método de pago y captura de datos
+ */
+
+/**
+ * PANTALLA DE SELECCIÓN DE PAGO
+ * GET /checkout/payment/:orderId
+ * 
+ * Muestra opciones de pago disponibles para una orden
+ * Incluye formularios para diferentes métodos de pago
+ * 
+ * PARAMS: orderId - ObjectId de la orden a pagar
+ * MIDDLEWARE: authenticatePassport + userInSesion
+ * TEMPLATE: checkout/payment.hbs
+ * CONTEXT: order - Datos de la orden
+ * RESPONSE: Página de selección de método de pago
+ * SECURITY: Validación de ObjectId, propiedad de orden
+ */
 // === Checkout: Vistas de pago para una orden ===
 
 // 3.1 Ver pantalla de pago (selección de método)
@@ -409,6 +671,25 @@ router.get(
   }
 );
 
+/**
+ * PROCESAR PAGO MÓVIL CON COMPROBANTE
+ * POST /checkout/payment/pagomovil/:orderId
+ * 
+ * Captura datos de transferencia Pago Móvil y comprobante
+ * Requiere subida de imagen como evidencia de pago
+ * 
+ * PARAMS: orderId - ObjectId de la orden
+ * BODY: bank, phone, docId, reference, amount
+ * FILE: proof - Comprobante de imagen (requerido)
+ * 
+ * MIDDLEWARE: 
+ * - authenticatePassport + userInSesion
+ * - paymentProofUpload.single("proof")
+ * - validateFile (required: true, 5MB max)
+ * 
+ * RESPONSE: Redirección a página de agradecimiento
+ * SECURITY: Validación de archivo, datos de pago, propiedad de orden
+ */
 // 3.2 Reportar Pago Móvil (manual) + comprobante
 router.post(
   "/checkout/payment/pagomovil/:orderId",
@@ -448,6 +729,20 @@ router.post(
   }
 );
 
+/**
+ * PROCESAR PAGO ZELLE
+ * POST /checkout/payment/zelle/:orderId
+ * 
+ * Captura datos de transferencia Zelle internacional
+ * No requiere comprobante físico (referencia autogenerada)
+ * 
+ * PARAMS: orderId - ObjectId de la orden
+ * BODY: email, reference, amount (en USD)
+ * 
+ * MIDDLEWARE: authenticatePassport + userInSesion
+ * RESPONSE: Redirección a página de agradecimiento
+ * SECURITY: Validación de email y referencia Zelle
+ */
 // 3.3 Reportar Zelle (manual)
 router.post(
   "/checkout/payment/zelle/:orderId",
@@ -472,6 +767,20 @@ router.post(
   }
 );
 
+/**
+ * PÁGINA DE CONFIRMACIÓN DE COMPRA
+ * GET /checkout/thanks/:orderId
+ * 
+ * Página final de agradecimiento y confirmación
+ * Muestra resumen de compra completada
+ * 
+ * PARAMS: orderId - ObjectId de la orden procesada
+ * MIDDLEWARE: authenticatePassport + userInSesion
+ * TEMPLATE: checkout/thanks.hbs
+ * CONTEXT: order - Datos completos de la orden
+ * RESPONSE: Página de confirmación con detalles
+ * SECURITY: Validación de propiedad de orden
+ */
 // 3.4 Pantalla de gracias
 router.get(
   "/checkout/thanks/:orderId",
@@ -491,6 +800,15 @@ router.get(
   }
 );
 
+/**
+ * MIDDLEWARE DE MANEJO DE ERRORES MULTER
+ * 
+ * Manejo global de errores de subida de archivos
+ * Proporciona responses apropiados para fallos de upload
+ * 
+ * APLICADO: Globalmente al router de vistas
+ * SECURITY: Previene exposición de detalles internos
+ */
 // OWASP - Middleware de manejo de errores de multer
 router.use(handleMulterError);
 

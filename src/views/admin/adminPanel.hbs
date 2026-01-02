@@ -1,5 +1,177 @@
 <h2>Panel de Administración</h2>
+
+<!-- Panel de Cotización EUR -->
+<div
+  class="currency-panel"
+  style="
+  background: rgb(111, 151, 111);
+  color: white;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  max-width: 400px;
+"
+>
+  <h3 style="margin: 0 0 15px 0; display: flex; align-items: center;">
+    💱 Cotización EUR
+    <button
+      id="save-rate-btn"
+      style="
+      margin-left: auto;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 12px;
+    "
+    >💾 Guardar</button>
+  </h3>
+
+  <div class="rate-display" style="text-align: center; margin-bottom: 15px;">
+
+    <input
+      id="eur-price-input"
+      type="number"
+      step="0.0001"
+      min="0"
+      placeholder="0.00"
+      style="
+        font-size: 24px; 
+        font-weight: bold; 
+        color: #333;
+        background: rgba(255,255,255,0.9);
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 8px;
+        padding: 8px 12px;
+        text-align: center;
+        width: 160px;
+        margin-right: 8px;
+      "
+    />
+    <span style="font-size: 24px; font-weight: bold; color: #fef3c7;">EUR</span>
+  </div>
+
+  {{! <div style="font-size: 11px; opacity: 0.7;">
+    Fuente:
+    <span id="rate-source">---</span>
+    | Actualizado:
+    <span id="rate-timestamp">---</span>
+  </div> }}
+</div>
+
 <nav style="margin-bottom:2rem;">
-  <a href="/admin/products" style="margin-right:1.5rem; font-weight:bold;">Gestionar Productos</a>
-  <a href="/admin/users" style="margin-right:1.5rem; font-weight:bold;">Gestionar Usuarios</a>
-  </nav>
+  <a
+    href="/admin/products"
+    style="margin-right:1.5rem; font-weight:bold;"
+  >Gestionar Productos</a>
+  <a
+    href="/admin/users"
+    style="margin-right:1.5rem; font-weight:bold;"
+  >Gestionar Usuarios</a>
+</nav>
+
+<script>
+/**
+ * Panel de Cotización EUR - Solo guardado manual
+ */
+class AdminCurrencyPanel {
+  constructor() {
+    this.isUpdating = false;
+    this.setupEvents();
+  }
+
+  setupEvents() {
+    // ÚNICAMENTE el botón de guardar, sin auto-cargas
+    const saveBtn = document.getElementById('save-rate-btn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => this.manualSave());
+    }
+  }
+
+  async manualSave() {
+    if (this.isUpdating) return;
+    
+    const input = document.getElementById('eur-price-input');
+    if (!input) return;
+    
+    const rate = parseFloat(input.value);
+    
+    if (isNaN(rate) || rate <= 0) {
+      alert('Por favor, ingrese un precio válido mayor a 0');
+      return;
+    }
+    
+    try {
+      this.isUpdating = true;
+      this.updateButtonState(true);
+      
+      // Actualizar precios en el servidor
+      const response = await fetch('/api/admin/update-prices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          eurRate: rate,
+          markup: 0.15
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.status === 'success') {
+        // Guardar en localStorage DESPUÉS del éxito
+        localStorage.setItem('admin_eur_rate', rate.toString());
+        this.showSaveSuccess(`${result.data.updatedCount} productos actualizados`);
+      } else {
+        throw new Error(result.message);
+      }
+      
+    } catch (error) {
+      console.error('Error actualizando precios:', error);
+      alert('Error actualizando precios: ' + error.message);
+    } finally {
+      this.isUpdating = false;
+      this.updateButtonState(false);
+    }
+  }
+
+  showSaveSuccess(message = 'Guardado') {
+    const btn = document.getElementById('save-rate-btn');
+    if (btn) {
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `✅ ${message}`;
+      btn.style.background = 'rgba(16, 185, 129, 0.3)';
+      
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.style.background = 'rgba(255,255,255,0.2)';
+      }, 3000);
+    }
+  }
+
+  updateButtonState(updating) {
+    const btn = document.getElementById('save-rate-btn');
+    if (btn) {
+      btn.disabled = updating;
+      btn.innerHTML = updating ? '⏳ Actualizando...' : '💾 Guardar';
+      btn.style.opacity = updating ? '0.6' : '1';
+    }
+  }
+}
+
+// Solo inicializar el panel, sin auto-cargas
+document.addEventListener('DOMContentLoaded', () => {
+  window.adminCurrencyPanel = new AdminCurrencyPanel();
+  
+  // Cargar valor guardado SOLO en el input, sin disparar eventos
+  const savedRate = localStorage.getItem('admin_eur_rate');
+  const input = document.getElementById('eur-price-input');
+  if (savedRate && input) {
+    input.value = parseFloat(savedRate).toFixed(4);
+  }
+});
+</script>

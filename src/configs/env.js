@@ -1,3 +1,31 @@
+/**
+ * @fileoverview Validación y configuración de variables de entorno
+ * 
+ * Sistema robusto de validación de variables de entorno basado en Joi.
+ * Implementa validaciones de seguridad según estándares OWASP:
+ * - Longitud mínima para secretos
+ * - Formatos seguros para URLs y emails
+ * - Patrones de contraseñas robustas
+ * - Validación de puertos y URIs
+ * - Verificaciones adicionales por ambiente
+ * 
+ * SEGURIDAD OWASP:
+ * - A02:2021 Cryptographic Failures: Secretos con longitud mínima
+ * - A05:2021 Security Misconfiguration: Validación de configuración
+ * - A07:2021 Identification and Authentication Failures: Contraseñas robustas
+ * 
+ * CARACTERÍSTICAS:
+ * - Validación estricta con Joi
+ * - Mensajes de error descriptivos
+ * - Warnings de seguridad para producción
+ * - Logging estructurado de validación
+ * - Terminación controlada en caso de error
+ * 
+ * @author Sistema SuperMercado Online
+ * @version 1.0.0
+ * @since 2026-01-02
+ */
+
 import Joi from 'joi';
 import { logger } from '../utils/logger.js';
 
@@ -98,7 +126,42 @@ const envSchema = Joi.object({
     .optional()
 }).unknown();
 
-// Función para validar variables de entorno
+/**
+ * Valida todas las variables de entorno requeridas para la aplicación
+ * 
+ * Ejecuta validación completa utilizando el schema Joi definido,
+ * incluyendo verificaciones adicionales de seguridad específicas
+ * para ambiente de producción.
+ * 
+ * VALIDACIONES PRINCIPALES:
+ * - Formato y longitud de secretos JWT/Cookie/Session
+ * - Validación de URLs y emails
+ * - Patrones de contraseñas seguras
+ * - Configuración de puertos válidos
+ * - URIs de conexión MongoDB
+ * 
+ * VERIFICACIONES DE SEGURIDAD:
+ * - Longitud de secretos en producción (64+ caracteres)
+ * - URLs sin localhost en producción
+ * - SSL habilitado para MongoDB en producción
+ * - Nivel de logging apropiado
+ * 
+ * COMPORTAMIENTO:
+ * - Termina proceso con exit(1) si hay errores críticos
+ * - Registra warnings para configuraciones inseguras
+ * - Logging detallado del proceso de validación
+ * - Retorna objeto con variables validadas
+ * 
+ * @function validateEnvVars
+ * @returns {Object} Variables de entorno validadas y normalizadas
+ * @throws {ProcessExit} Termina proceso si validación falla
+ * 
+ * CASOS DE USO:
+ * - Inicialización de aplicación
+ * - Verificación de configuración en CI/CD
+ * - Validación antes de deploy
+ * - Setup de contenedores
+ */
 export const validateEnvVars = () => {
   const { error, value } = envSchema.validate(process.env);
   
