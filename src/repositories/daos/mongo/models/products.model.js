@@ -70,6 +70,17 @@ const productSchema = new mongoose.Schema(
     },
 
     /**
+     * PRECIO DE REFERENCIA BASE (EUR)
+     * Precio base fijo en euros que no cambia
+     * - Se usa para calcular el precio final con cotización
+     * - No se modifica en actualizaciones automáticas
+     */
+    ref: {
+      type: Number,
+      default: function() { return this.price; } // Por defecto igual al price inicial
+    },
+
+    /**
      * STOCK DISPONIBLE
      * Cantidad de unidades disponibles en inventario
      * - Se reduce al realizar ventas

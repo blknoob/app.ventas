@@ -435,13 +435,31 @@ router.get(
   authenticatePassport,
   requireAdmin,
   userInSesion,
-  (req, res) => {
-    res.render("admin/adminPanel");
+  async (req, res) => {
+    try {
+      // Obtener información del último valor EUR utilizado
+      const eurRateInfo = await systemConfigService.getLastEurRateInfo();
+      
+      res.render("admin/adminPanel", { 
+        currentEurRate: eurRateInfo.rate.toFixed(4),
+        lastUpdateDate: eurRateInfo.updatedAt ? eurRateInfo.updatedAt.toLocaleString('es-ES') : null,
+        isDefault: eurRateInfo.isDefault
+      });
+    } catch (error) {
+      console.error('Error obteniendo valor EUR actual:', error);
+      res.render("admin/adminPanel", { 
+        currentEurRate: "2.0000",
+        lastUpdateDate: null,
+        isDefault: true
+      });
+    }
   }
 );
 
 import ProductsService from "../services/products.service.js";
+import SystemConfigService from "../services/systemConfig.service.js";
 const productsService = new ProductsService();
+const systemConfigService = new SystemConfigService();
 
 router.get(
   "/admin/products",

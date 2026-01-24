@@ -113,12 +113,20 @@ class ProductsViewController {
         );
       }
 
-      // Convertir precios de EUR a moneda local
-      console.log('💰 ProductsViewController: Convirtiendo precios de EUR...');
-      const productsWithConvertedPrices = await currencyService.convertMultiplePrices(
-        filteredProducts, 
-        { markup: 0.15 } // 15% de margen
-      );
+      // DESACTIVADO: Conversión automática de precios para permitir control manual
+      // Esta funcionalidad estaba interfiriendo con el control de cambio manual
+      console.log('💰 ProductsViewController: Conversión automática DESACTIVADA para control manual');
+      
+      // Usar productos sin conversión automática
+      const productsWithConvertedPrices = filteredProducts;
+      
+      // // CÓDIGO ANTERIOR (comentado):
+      // // Convertir precios de EUR a moneda local
+      // console.log('💰 ProductsViewController: Convirtiendo precios de EUR...');
+      // const productsWithConvertedPrices = await currencyService.convertMultiplePrices(
+      //   filteredProducts, 
+      //   { markup: 0.15 } // 15% de margen
+      // );
       
       req.products = productsWithConvertedPrices;
       req.currentCategory = category;

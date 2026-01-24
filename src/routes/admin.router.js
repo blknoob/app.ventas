@@ -155,6 +155,21 @@ router.post("/products", productsController.createProduct);
 router.put("/products/:id", productsController.updateProduct);
 
 /**
+ * ACTUALIZAR PRODUCTO VIA FORMULARIO
+ * POST /admin/products/edit/:id
+ * 
+ * Actualización de producto desde formulario HTML (método POST)
+ * Redirige al formulario con mensaje de éxito/error
+ * 
+ * PARAMS: id - ObjectId del producto
+ * BODY: Campos a actualizar desde formulario
+ * MIDDLEWARE: authenticateToken + isAdmin
+ * CONTROLLER: ProductsController.updateProduct
+ * RESPONSE: Redirect con mensaje
+ */
+router.post("/products/edit/:id", productsController.updateProduct);
+
+/**
  * ELIMINAR PRODUCTO
  * DELETE /admin/products/:id
  * 
@@ -183,5 +198,65 @@ router.delete("/products/:id", productsController.deleteProduct);
  * OPERATION: Actualización masiva de precios en base de datos
  */
 router.post("/update-prices", adminController.updatePricesWithEurRate);
+
+/**
+ * MIGRAR CAMPO REF A PRODUCTOS EXISTENTES
+ * POST /admin/migrate-ref
+ * 
+ * Endpoint temporal para agregar campo ref a productos existentes
+ * Copia el valor actual de price al nuevo campo ref
+ * 
+ * MIDDLEWARE: authenticateToken + isAdmin
+ * CONTROLLER: AdminController.migrateRefField
+ * RESPONSE: { success: boolean, updatedCount: number }
+ * OPERATION: Migración de datos una sola vez
+ */
+router.post("/migrate-ref", adminController.migrateRefField);
+
+/**
+ * RESTAURAR PRECIOS ORIGINALES
+ * POST /admin/restore-prices
+ * 
+ * Restaura precios a sus valores originales
+ * Copia el campo ref de vuelta al campo price
+ * 
+ * MIDDLEWARE: authenticateToken + isAdmin
+ * CONTROLLER: AdminController.restorePrices
+ * RESPONSE: { success: boolean, restoredCount: number }
+ * OPERATION: Restaurar precios dañados por actualizaciones automáticas
+ */
+router.post("/restore-prices", authenticateToken, isAdmin, adminController.restorePrices);
+
+/**
+ * FIJAR REF EN VALOR CORRECTO
+ * POST /admin/fix-ref
+ * 
+ * Fija el campo ref en 6 para todos los productos
+ * Para reparar valores de ref multiplicados incorrectamente
+ * 
+ * MIDDLEWARE: authenticateToken + isAdmin
+ * CONTROLLER: AdminController.fixRefValues
+ * RESPONSE: { success: boolean, fixedCount: number }
+ */
+router.post("/fix-ref", authenticateToken, isAdmin, adminController.fixRefValues);
+
+/**
+ * FIJAR REF EN VALOR CORRECTO - EMERGENCIA
+ * POST /admin/emergency-fix-ref
+ * 
+ * Fija el campo ref en 6 para todos los productos
+ * Para reparar valores de ref multiplicados incorrectamente
+ * SIN AUTENTICACIÓN PARA EMERGENCIA
+ */
+router.post("/emergency-fix-ref", adminController.fixRefValues);
+
+/**
+ * ACTUALIZAR PRECIOS CON COTIZACIÓN EUR - EMERGENCIA
+ * POST /admin/emergency-update-prices
+ * 
+ * Actualiza todos los precios aplicando cotización EUR manual
+ * SIN AUTENTICACIÓN PARA EMERGENCIA - SOLO PARA TESTING
+ */
+router.post("/emergency-update-prices", adminController.emergencyUpdatePrices);
 
 export default router;
