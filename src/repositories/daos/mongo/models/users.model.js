@@ -83,10 +83,11 @@ const userSchema = new mongoose.Schema(
      * - Procesada con bcrypt antes de almacenar
      * - Validada con patrones seguros en registro
      * - Debe incluir mayúscula, minúscula, número y símbolo
+     * - No requerido para usuarios OAuth
      */
     password: {
       type: String,
-      required: true,
+      required: false, // Cambiado para permitir OAuth sin password
     },
 
     /**
@@ -101,6 +102,71 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["user", "admin"],
       default: "user",
+    },
+
+    /**
+     * PROVEEDOR DE AUTENTICACIÓN
+     * Indica cómo se registró el usuario
+     * - "local": Registro tradicional con email/password
+     * - "google": Login con Google OAuth
+     * - "facebook": Login con Facebook
+     * - "apple": Login con Apple ID
+     */
+    provider: {
+      type: String,
+      enum: ["local", "google", "facebook", "apple"],
+      default: "local",
+    },
+
+    /**
+     * ID DE GOOGLE OAUTH
+     * Identificador único de Google para este usuario
+     * - Se obtiene durante el proceso OAuth
+     * - Permite login automático sin password
+     */
+    googleId: {
+      type: String,
+      default: null,
+    },
+
+    /**
+     * ID DE FACEBOOK
+     * Identificador único de Facebook para este usuario
+     */
+    facebookId: {
+      type: String,
+      default: null,
+    },
+
+    /**
+     * ID DE APPLE
+     * Identificador único de Apple ID para este usuario
+     */
+    appleId: {
+      type: String,
+      default: null,
+    },
+
+    /**
+     * AVATAR DEL USUARIO
+     * URL de la foto de perfil del usuario
+     * - Puede venir de OAuth providers
+     * - URL completa o path relativo
+     */
+    avatar: {
+      type: String,
+      default: null,
+    },
+
+    /**
+     * VERIFICACIÓN DE EMAIL
+     * Indica si el email ha sido verificado
+     * - true para usuarios OAuth (pre-verificados)
+     * - false para registro local hasta verificar
+     */
+    isVerified: {
+      type: Boolean,
+      default: false,
     },
 
     /**

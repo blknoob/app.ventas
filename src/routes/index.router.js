@@ -44,6 +44,7 @@ import adminRouter from "./admin.router.js";
 import checkoutRouter from "./checkout.router.js";
 import paymentsRouter from "./payments.router.js";
 import currencyRouter from "./currency.router.js";
+import authRouter from "./auth.router.js";
 import viewsRouter from "./views.router.js";
 
 const router = Router();
@@ -135,6 +136,12 @@ router.use("/api/currency", currencyRouter);
  * Herramientas privilegiadas para administradores del sistema
  */
 router.use("/api/admin", adminRouter);
+
+/**
+ * AUTENTICACIÓN OAUTH - /auth/*
+ * Rutas para login social con Google, Facebook y Apple
+ */
+router.use("/auth", authRouter);
 
 /**
  * EMERGENCY FIX - Solo para resolver precios multiplicados
