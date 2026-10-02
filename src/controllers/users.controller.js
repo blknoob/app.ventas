@@ -122,14 +122,14 @@ class UsersController {
    */
   async register(req, res) {
     try {
-      const { first_name, last_name, email, password, age } = req.body;
+      const { first_name, last_name, email, password, birth_date } = req.body;
 
       const response = await usersService.createUser({
         first_name,
         last_name,
         email,
         password,
-        age,
+        birth_date,
         role: "user",
       });
 

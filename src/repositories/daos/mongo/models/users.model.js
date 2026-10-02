@@ -66,15 +66,24 @@ const userSchema = new mongoose.Schema(
     },
 
     /**
-     * EDAD DEL USUARIO
-     * Edad en años del usuario
-     * - Requerido para cumplir con regulaciones (COPPA: 13+ años)
+     * FECHA DE NACIMIENTO
+     * Fecha de nacimiento del usuario
+     * - Requerido para cumplir con regulaciones (mayoría de edad)
      * - Se puede usar para restricciones de productos (alcohol, etc.)
-     * - Validado en el middleware: entre 13 y 120 años
+     * - El usuario debe ser mayor de 18 años para registrarse
      */
-    age: {
-      type: Number,
+    birth_date: {
+      type: Date,
       required: true,
+      validate: {
+        validator: function(date) {
+          if (!date) return false;
+          const today = new Date();
+          const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+          return date <= eighteenYearsAgo;
+        },
+        message: 'Debes ser mayor de 18 años para registrarte'
+      }
     },
 
     /**
